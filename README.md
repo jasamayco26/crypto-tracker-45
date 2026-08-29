@@ -1,43 +1,44 @@
-# Crypto Tracker 45
+# crypto-tracker-45
 
-Crypto Tracker 45 is a Python-based application designed for cryptocurrency enthusiasts to monitor real-time price data of their favorite digital assets. Leveraging the power of public APIs, this project provides an intuitive interface to access essential market information and enhance your crypto trading experience.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+crypto-tracker-45 is a Python command-line tool for real-time cryptocurrency price monitoring and portfolio management. It retrieves live market data from public APIs and helps users stay informed about price changes without requiring external accounts or paid services.
 
 ## Features
 
-- **Real-time Price Updates**: Fetch live cryptocurrency prices from multiple exchanges to stay up-to-date with market fluctuations.
-- **Portfolio Management**: Track your crypto investments and view their current value against market changes.
-- **Custom Alerts**: Set up notifications for price thresholds on your preferred cryptocurrencies to make informed trading decisions.
-- **Data Visualization**: Utilize Matplotlib to generate dynamic charts that visualize price trends and historical performance.
+- Real-time price updates and 24h percentage changes via the CoinGecko API
+- Local portfolio tracking with automatic USD valuation across multiple assets
+- Configurable price alerts that trigger on user-defined percentage thresholds
+- Export price history and portfolio snapshots to CSV format
 
 ## Installation
 
-To get started with Crypto Tracker 45, follow these steps to set up your environment:
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/crypto-tracker-45.git
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd crypto-tracker-45
-   ```
-3. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+git clone https://github.com/Developer/crypto-tracker-45.git
+cd crypto-tracker-45
+pip install -r requirements.txt
+```
 
 ## Basic Usage
 
-After installation, you can run the tracker by executing the following command:
+Track live prices:
 
 ```bash
-python main.py
+python crypto_tracker.py --coins BTC ETH SOL
 ```
 
-Upon startup, you will be prompted to enter the cryptocurrencies you wish to monitor. You can then view real-time prices, your portfolio details, and set up alerts for specified price points.
+View portfolio value:
+
+```bash
+python crypto_tracker.py --portfolio
+```
+
+Set a price alert:
+
+```bash
+python crypto_tracker.py --alert BTC 5
+```
 
 ## License
 
-![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License
