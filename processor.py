@@ -1,57 +1,48 @@
-from typing import Dict, Any, List
+import logging
+from typing import Dict, Any
 
-# Supported cryptocurrencies for the tracker
-VALID_CRYPTOS = {'BTC', 'ETH', 'LTC', 'XRP', 'ADA'}
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def validate_crypto_input(data: Dict[str, Any]) -> bool:
+def validate_crypto_data(data: Dict[str, Any]) -> bool:
+    """Validates the incoming crypto tracking payload."""
     if not isinstance(data, dict):
         return False
-    if 'symbol' not in data or 'amount' not in data:
-        return False
-    symbol = data['symbol']
-    amount = data['amount']
-    if not isinstance(symbol, str) or symbol.upper() not in VALID_CRYPTOS:
-        return False
-    try:
-        amount_float = float(amount)
-        if amount_float <= 0:
+    
+    required_fields = ["symbol", "price", "volume"]
+    for field in required_fields:
+        if field not in data:
+            logging.warning(f"Validation failed: Missing field '{field}'")
             return False
-    except (ValueError, TypeError):
+            
+    if not isinstance(data["symbol"], str) or not data["symbol"].isalpha():
+        logging.warning("Validation failed: 'symbol' must be an alphabetic string")
         return False
+        
+    try:
+        price = float(data["price"])
+        volume = float(data["volume"])
+        if price <= 0 or volume < 0:
+            logging.warning("Validation failed: 'price' and 'volume' must be positive numbers")
+            return False
+    except (TypeError, ValueError):
+        logging.warning("Validation failed: 'price' and 'volume' must be numeric values")
+        return False
+        
     return True
 
-def process_crypto_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    # Mock price data for simulation
-    prices = {'BTC': 65000.0, 'ETH': 2600.0, 'LTC': 75.0, 'XRP': 0.55, 'ADA': 0.35}
-    symbol = data['symbol'].upper()
-    amount = float(data['amount'])
-    price = prices.get(symbol, 0.0)
-    total_value = amount * price
-    return {'symbol': symbol, 'amount': amount, 'current_price': price, 'total_value_usd': total_value}
-
-def main_processing_loop(input_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    # Main processing loop with input validation
-    processed_results = []
-    for idx, input_data in enumerate(input_list):
-        # Validate input before any processing
-        if not validate_crypto_input(input_data):
-            print(f"Invalid input skipped at {idx}: {input_data}")
+def process_stream(payloads: list) -> None:
+    """Main processing loop with input validation for crypto tracker."""
+    for index, payload in enumerate(payloads):
+        logging.info(f"Processing payload index {index}")
+        if not validate_crypto_data(payload):
+            logging.error(f"Skipping invalid payload at index {index}")
             continue
-        try:
-            result = process_crypto_data(input_data)
-            processed_results.append(result)
-            print(f"Processed {result['symbol']}: value {result['total_value_usd']}")
-        except Exception as e:
-            print(f"Error: {e}")
-    return processed_results
-
-if __name__ == "__main__":
-    sample_data = [
-        {'symbol': 'BTC', 'amount': 0.5},
-        {'symbol': 'eth', 'amount': '1.2'},
-        {'symbol': 'DOGE', 'amount': 100},
-        {'symbol': 'LTC', 'amount': '0'},
-        {'symbol': 'XRP', 'amount': 200},
-    ]
-    results = main_processing_loop(sample_data)
-    print("Results:", results)
+            
+        # Process validated payload
+        symbol = payload["symbol"].upper()
+        price = float(payload["price"])
+        volume = float(payload["volume"])
+        market_cap = price * volume
+        
+        logging.info(f"Successfully processed {symbol}: Price ${price:.2f}, Market Cap estimation: ${market_cap:.2f}")
