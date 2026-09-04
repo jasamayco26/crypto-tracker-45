@@ -1,44 +1,48 @@
-import requests
-from typing import Dict, List, Optional
+from typing import Dict, Any, Union
 
-def fetch_current_price(crypto_id: str, vs_currency: str = "usd") -> Optional[float]:
-    """Fetch the current price of a cryptocurrency."""
-    try:
-        url = "https://api.coingecko.com/api/v3/simple/price"
-        params = {"ids": crypto_id, "vs_currencies": vs_currency}
-        response = requests.get(url, params=params, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        return data.get(crypto_id, {}).get(vs_currency)
-    except Exception:
-        return None
+def format_currency(amount: float, currency: str = "USD") -> str:
+    """Format a numeric amount as a currency string.
 
-def calculate_percentage_change(previous_price: float, current_price: float) -> float:
-    """Calculate the percentage change in price."""
-    if previous_price == 0:
+    Args:
+        amount: The financial value to format.
+        currency: The target currency symbol (e.g., USD, EUR).
+
+    Returns:
+        A formatted string representation of the currency.
+    """
+    if amount >= 1.0:
+        return f"{currency} {amount:,.2f}"
+    return f"{currency} {amount:,.6f}"
+
+def calculate_percentage_change(old_price: float, new_price: float) -> float:
+    """Calculate the percentage change between two price points.
+
+    Args:
+        old_price: The historical price.
+        new_price: The current price.
+
+    Returns:
+        The percentage change as a float. Returns 0.0 if old_price is zero.
+    """
+    if old_price == 0.0:
         return 0.0
-    change = ((current_price - previous_price) / previous_price) * 100
-    return round(change, 2)
+    return ((new_price - old_price) / old_price) * 100.0
 
-def format_price(price: float, currency: str = "USD") -> str:
-    """Format a price value for display."""
-    return f"{price:,.2f} {currency.upper()}"
+def parse_ticker_data(data: Dict[str, Any]) -> Dict[str, Union[str, float]]:
+    """Extract and normalize ticker information from an API response dictionary.
 
-def calculate_portfolio_value(holdings: Dict[str, float], prices: Dict[str, float]) -> float:
-    """Calculate total value of crypto portfolio."""
-    total = 0.0
-    for crypto, amount in holdings.items():
-        if crypto in prices:
-            total += amount * prices[crypto]
-    return round(total, 2)
+    Args:
+        data: Raw payload from a cryptocurrency API.
 
-def get_trend_direction(prices: List[float]) -> str:
-    """Determine price trend direction from list of prices."""
-    if len(prices) < 2:
-        return "unknown"
-    change = calculate_percentage_change(prices[0], prices[-1])
-    if change > 1:
-        return "up"
-    elif change < -1:
-        return "down"
-    return "stable"
+    Returns:
+        A dictionary containing normalized symbol, price, and volume.
+    """
+    symbol = str(data.get("symbol", "UNKNOWN")).upper()
+    price = float(data.get("price", 0.0))
+    volume = float(data.get("volume", 0.0))
+    
+    return {
+        "symbol": symbol,
+        "price": price,
+        "volume": volume
+    }
