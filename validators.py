@@ -1,28 +1,41 @@
 import re
-from typing import List, Tuple
 
-def is_valid_address(address: str) -> bool:
-    """Check if the given address is valid for the cryptocurrency.
-    Basic validation includes checking length and format.
-    """
-    # Example: Ethereum addresses must start with '0x' and be 42 characters long
-    if not address.startswith('0x') or len(address) != 42:
-        return False
-    return re.match('^0x[a-fA-F0-9]{40}$', address) is not None
+class InputValidator:
+    """Validator for cryptocurrency processing inputs."""
 
-def validate_transaction(tx: dict) -> Tuple[bool, List[str]]:
-    """Validate the transaction dictionary.
-    Checks required fields and their formats.
-    """
-    errors = []
-    if 'from' not in tx or not is_valid_address(tx['from']):
-        errors.append('Invalid or missing sender address.')
-    if 'to' not in tx or not is_valid_address(tx['to']):
-        errors.append('Invalid or missing recipient address.')
-    if 'amount' not in tx or not isinstance(tx['amount'], (int, float)) or tx['amount'] <= 0:
-        errors.append('Invalid or missing transaction amount.')
-    return (len(errors) == 0, errors)
+    SYMBOL_PATTERN = re.compile(r'^[A-Z0-9]{2,10}$')
 
-# Example usage
-# result, error_list = validate_transaction({'from': '0xabc...', 'to': '0xdef...', 'amount': 10})
-# print(result, error_list)  
+    @staticmethod
+    def validate_ticker(ticker: str) -> bool:
+        """Checks if the ticker format is compliant."""
+        if not isinstance(ticker, str):
+            return False
+        return bool(InputValidator.SYMBOL_PATTERN.match(ticker.upper()))
+
+    @staticmethod
+    def validate_amount(amount: float) -> bool:
+        """Ensures the trade amount is positive."""
+        return isinstance(amount, (int, float)) and amount > 0
+
+    @staticmethod
+    def validate_payload(data: dict) -> bool:
+        """
+        Validates incoming processing request data.
+        Expected keys: 'ticker', 'amount'
+        """
+        required_keys = {'ticker', 'amount'}
+        if not all(key in data for key in required_keys):
+            return False
+
+        return (
+            InputValidator.validate_ticker(data['ticker']) and
+            InputValidator.validate_amount(data['amount'])
+        )
+
+    @staticmethod
+    def sanitize_input(data: dict) -> dict:
+        """Normalizes data fields for processing."""
+        return {
+            'ticker': str(data['ticker']).strip().upper(),
+            'amount': float(data['amount'])
+        }
