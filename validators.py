@@ -1,41 +1,27 @@
-import re
+import logging
+from typing import Any, Dict
 
-class InputValidator:
-    """Validator for cryptocurrency processing inputs."""
-
-    SYMBOL_PATTERN = re.compile(r'^[A-Z0-9]{2,10}$')
-
-    @staticmethod
-    def validate_ticker(ticker: str) -> bool:
-        """Checks if the ticker format is compliant."""
-        if not isinstance(ticker, str):
+def validate_ticker_data(data: Dict[str, Any]) -> bool:
+    """Validates incoming crypto ticker payload structure."""
+    required_fields = ['symbol', 'price', 'timestamp']
+    
+    try:
+        if not isinstance(data, dict):
             return False
-        return bool(InputValidator.SYMBOL_PATTERN.match(ticker.upper()))
-
-    @staticmethod
-    def validate_amount(amount: float) -> bool:
-        """Ensures the trade amount is positive."""
-        return isinstance(amount, (int, float)) and amount > 0
-
-    @staticmethod
-    def validate_payload(data: dict) -> bool:
-        """
-        Validates incoming processing request data.
-        Expected keys: 'ticker', 'amount'
-        """
-        required_keys = {'ticker', 'amount'}
-        if not all(key in data for key in required_keys):
+        
+        if not all(field in data for field in required_fields):
+            logging.warning(f"Missing fields in data: {data}")
             return False
+            
+        if not isinstance(data['price'], (int, float)) or data['price'] < 0:
+            logging.warning(f"Invalid price value: {data.get('price')}")
+            return False
+            
+        return True
+    except Exception as e:
+        logging.error(f"Validation runtime error: {e}")
+        return False
 
-        return (
-            InputValidator.validate_ticker(data['ticker']) and
-            InputValidator.validate_amount(data['amount'])
-        )
-
-    @staticmethod
-    def sanitize_input(data: dict) -> dict:
-        """Normalizes data fields for processing."""
-        return {
-            'ticker': str(data['ticker']).strip().upper(),
-            'amount': float(data['amount'])
-        }
+def sanitize_input(symbol: str) -> str:
+    """Cleans user input to prevent injection."""
+    return ''.join(char for char in symbol if char.isalnum()).upper()
