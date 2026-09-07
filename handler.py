@@ -1,47 +1,43 @@
-import logging
+import requests
+from requests.exceptions import RequestException, Timeout
 
-logger = logging.getLogger('crypto-tracker-45')
+class CryptoDataHandler:
+    """Handles fetching and processing cryptocurrency market data."""
 
-def validate_crypto_input(data: dict) -> bool:
-    """Validate incoming crypto ticker data structure and values."""
-    required_fields = ['symbol', 'price', 'volume']
-    
-    # Ensure all required keys are present
-    if not all(field in data for field in required_fields):
-        logger.warning("Missing required fields in input data: %s", data)
-        return False
-        
-    symbol = data.get('symbol')
-    price = data.get('price')
-    volume = data.get('volume')
-    
-    # Validate symbol format
-    if not isinstance(symbol, str) or not symbol.isalnum():
-        logger.error("Invalid symbol format: %s", symbol)
-        return False
-        
-    # Validate numeric ranges
-    try:
-        if float(price) <= 0 or float(volume) < 0:
-            logger.error("Price and volume must be non-negative numbers: price=%s, volume=%s", price, volume)
-            return False
-    except (ValueError, TypeError):
-        logger.error("Non-numeric values detected for price or volume")
-        return False
-        
-    return True
+    def __init__(self, base_url: str, timeout: int = 10):
+        self.base_url = base_url
+        self.timeout = timeout
 
-def process_crypto_stream(stream_data: list):
-    """Main processing loop with integrated input validation."""
-    logger.info("Starting crypto stream processing loop")
-    
-    for entry in stream_data:
-        if not validate_crypto_input(entry):
-            logger.debug("Skipping invalid entry in stream")
-            continue
+    def fetch_price(self, symbol: str) -> float:
+        """Fetches price with robust error handling for API reliability."""
+        url = f"{self.base_url}/price/{symbol}"
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
             
-        # Process valid cryptocurrency data
-        clean_symbol = entry['symbol'].upper()
-        clean_price = float(entry['price'])
-        
-        logger.info("Successfully processed %s at price %s", clean_symbol, clean_price)
+            if 'price' not in data:
+                raise ValueError(f"Invalid data structure for {symbol}")
+                
+            return float(data['price'])
+
+        except Timeout:
+            print(f"Request timed out for {symbol}")
+            return 0.0
+        except RequestException as e:
+            print(f"Network error fetching {symbol}: {e}")
+            return 0.0
+        except (ValueError, KeyError) as e:
+            print(f"Data parsing error for {symbol}: {e}")
+            return 0.0
+        except Exception as e:
+            print(f"Unexpected error for {symbol}: {e}")
+            return 0.0
+
+    def get_market_status(self) -> bool:
+        """Checks if the remote crypto exchange API is healthy."""
+        try:
+            resp = requests.head(self.base_url, timeout=5)
+            return resp.status_code == 200
+        except RequestException:
+            return False
