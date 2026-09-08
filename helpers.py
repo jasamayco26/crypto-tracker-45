@@ -1,48 +1,53 @@
-from typing import Dict, Any, Union
+"""Utility helper functions for crypto price and market data manipulation."""
 
-def format_currency(amount: float, currency: str = "USD") -> str:
-    """Format a numeric amount as a currency string.
+from typing import Dict, Any, Union, Optional
 
-    Args:
-        amount: The financial value to format.
-        currency: The target currency symbol (e.g., USD, EUR).
 
-    Returns:
-        A formatted string representation of the currency.
-    """
-    if amount >= 1.0:
-        return f"{currency} {amount:,.2f}"
-    return f"{currency} {amount:,.6f}"
-
-def calculate_percentage_change(old_price: float, new_price: float) -> float:
-    """Calculate the percentage change between two price points.
-
-    Args:
-        old_price: The historical price.
-        new_price: The current price.
-
-    Returns:
-        The percentage change as a float. Returns 0.0 if old_price is zero.
-    """
-    if old_price == 0.0:
-        return 0.0
-    return ((new_price - old_price) / old_price) * 100.0
-
-def parse_ticker_data(data: Dict[str, Any]) -> Dict[str, Union[str, float]]:
-    """Extract and normalize ticker information from an API response dictionary.
-
-    Args:
-        data: Raw payload from a cryptocurrency API.
-
-    Returns:
-        A dictionary containing normalized symbol, price, and volume.
-    """
-    symbol = str(data.get("symbol", "UNKNOWN")).upper()
-    price = float(data.get("price", 0.0))
-    volume = float(data.get("volume", 0.0))
+def format_currency(value: Union[int, float], symbol: str = "$") -> str:
+    """Format a numeric value as a currency string with appropriate precision."""
+    if value is None:
+        return f"{symbol}0.00"
     
+    abs_val = abs(value)
+    if abs_val >= 1.0:
+        return f"{symbol}{value:,.2f}"
+    elif abs_val >= 0.0001:
+        return f"{symbol}{value:,.6f}"
+    else:
+        return f"{symbol}{value:,.8f}"
+
+
+def calculate_price_change(current_price: float, previous_price: float) -> Dict[str, Any]:
+    """Calculate absolute and percentage price changes between two points."""
+    if previous_price <= 0:
+        return {"change": 0.0, "percentage": 0.0, "direction": "neutral"}
+    
+    diff = current_price - previous_price
+    pct = (diff / previous_price) * 100.0
+    
+    if diff > 0:
+        direction = "up"
+    elif diff < 0:
+        direction = "down"
+    else:
+        direction = "neutral"
+        
     return {
-        "symbol": symbol,
-        "price": price,
-        "volume": volume
+        "change": round(diff, 8),
+        "percentage": round(pct, 2),
+        "direction": direction
     }
+
+
+def truncate_address(address: str, prefix_len: int = 6, suffix_len: int = 4) -> str:
+    """Truncate a crypto wallet address for compact display."""
+    if not address or len(address) <= (prefix_len + suffix_len):
+        return address or ""
+    return f"{address[:prefix_len]}...{address[-suffix_len:]}"
+
+
+def normalize_ticker(symbol: str) -> str:
+    """Normalize market ticker symbol to uppercase standard format."""
+    if not symbol:
+        return ""
+    return symbol.strip().upper().replace("-", "").replace("/", "")
