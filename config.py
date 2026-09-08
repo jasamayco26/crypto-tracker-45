@@ -3,46 +3,27 @@ import json
 from typing import Any, Dict
 
 DEFAULT_CONFIG = {
-    "COINGECKO_API_KEY": "",
-    "UPDATE_INTERVAL_SECONDS": 60,
-    "DEFAULT_FIAT_CURRENCY": "usd",
-    "TRACKED_CRYPTOS": ["bitcoin", "ethereum", "solana"],
-    "LOG_LEVEL": "INFO",
-    "ALERT_THRESHOLD_PERCENT": 5.0
+    "api_url": "https://api.crypto-tracker.io/v1",
+    "refresh_interval": 60,
+    "log_level": "INFO",
+    "max_retries": 3
 }
 
-class ConfigLoader:
-    """Loads and parses tracker configuration from file and environment variables."""
+def load_config(path: str = "config.json") -> Dict[str, Any]:
+    """Loads configuration from file with fallback to defaults."""
+    config = DEFAULT_CONFIG.copy()
+    
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                user_config = json.load(f)
+                config.update(user_config)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load {path}: {e}. Using defaults.")
+            
+    return config
 
-    def __init__(self, config_path: str = None) -> None:
-        self.config_path = config_path
-        self._config: Dict[str, Any] = DEFAULT_CONFIG.copy()
-        self._load()
-
-    def _load(self) -> None:
-        # Load from optional JSON file
-        if self.config_path and os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
-                    file_data = json.load(f)
-                    if isinstance(file_data, dict):
-                        self._config.update(file_data)
-            except (json.JSONDecodeError, OSError):
-                pass  # Fall back to defaults on parsing errors
-
-        # Override with environment variables
-        for key, default_val in DEFAULT_CONFIG.items():
-            env_val = os.getenv(key)
-            if env_val is not None:
-                if isinstance(default_val, list):
-                    self._config[key] = [item.strip() for item in env_val.split(",") if item.strip()]
-                elif isinstance(default_val, int):
-                    self._config[key] = int(env_val)
-                elif isinstance(default_val, float):
-                    self._config[key] = float(env_val)
-                else:
-                    self._config[key] = env_val
-
-    def get(self, key: str) -> Any:
-        """Retrieve a configured value by its key."""
-        return self._config.get(key)
+def get_config_value(key: str, path: str = "config.json") -> Any:
+    """Retrieves a single configuration key value."""
+    cfg = load_config(path)
+    return cfg.get(key, DEFAULT_CONFIG.get(key))
