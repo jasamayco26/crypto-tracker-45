@@ -1,43 +1,31 @@
-import requests
-from requests.exceptions import RequestException, Timeout
+from typing import List, Dict, Optional
+import decimal
 
-class CryptoDataHandler:
-    """Handles fetching and processing cryptocurrency market data."""
-
-    def __init__(self, base_url: str, timeout: int = 10):
-        self.base_url = base_url
-        self.timeout = timeout
-
-    def fetch_price(self, symbol: str) -> float:
-        """Fetches price with robust error handling for API reliability."""
-        url = f"{self.base_url}/price/{symbol}"
+def format_crypto_data(raw_data: List[Dict]) -> List[Dict]:
+    """Cleans and standardizes crypto market data from API responses."""
+    processed = []
+    
+    for item in raw_data:
         try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-            data = response.json()
+            # Standardize numeric values as Decimals for precision
+            price = decimal.Decimal(str(item.get('price', 0)))
+            volume = decimal.Decimal(str(item.get('volume_24h', 0)))
             
-            if 'price' not in data:
-                raise ValueError(f"Invalid data structure for {symbol}")
-                
-            return float(data['price'])
+            processed.append({
+                'symbol': str(item.get('symbol', 'UNKNOWN')).upper(),
+                'price': price,
+                'volume': volume,
+                'is_active': item.get('status') == 'active'
+            })
+        except (decimal.InvalidOperation, ValueError, TypeError):
+            continue
+            
+    return processed
 
-        except Timeout:
-            print(f"Request timed out for {symbol}")
-            return 0.0
-        except RequestException as e:
-            print(f"Network error fetching {symbol}: {e}")
-            return 0.0
-        except (ValueError, KeyError) as e:
-            print(f"Data parsing error for {symbol}: {e}")
-            return 0.0
-        except Exception as e:
-            print(f"Unexpected error for {symbol}: {e}")
-            return 0.0
+def filter_by_volume(data: List[Dict], min_volume: decimal.Decimal) -> List[Dict]:
+    """Filters crypto list based on 24h trading volume."""
+    return [d for d in data if d['volume'] >= min_volume]
 
-    def get_market_status(self) -> bool:
-        """Checks if the remote crypto exchange API is healthy."""
-        try:
-            resp = requests.head(self.base_url, timeout=5)
-            return resp.status_code == 200
-        except RequestException:
-            return False
+def calculate_market_cap(price: decimal.Decimal, supply: decimal.Decimal) -> decimal.Decimal:
+    """Computes estimated market capitalization."""
+    return (price * supply).quantize(decimal.Decimal('0.01'))
