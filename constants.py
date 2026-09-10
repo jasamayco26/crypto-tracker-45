@@ -1,28 +1,45 @@
-"""
-Global configuration constants for crypto-tracker-45.
-"""
+"""Constants for crypto data handling and API configuration."""
 
-# API endpoints
-COINGECKO_API_BASE = "https://api.coingecko.com/api/v3"
-BINANCE_API_BASE = "https://api.binance.com/api/v3"
+from typing import Dict, List
 
-# Supported cryptocurrency pairs
-SUPPORTED_PAIRS = [
-    "BTCUSDT",
-    "ETHUSDT",
-    "SOLUSDT",
-    "ADAUSDT",
-    "DOTUSDT"
+# API Endpoints and Base URLs
+COINGECKO_BASE_URL: str = "https://api.coingecko.com/api/v3"
+BINANCE_BASE_URL: str = "https://api.binance.com/api/v3"
+
+# Request Configurations
+DEFAULT_TIMEOUT_SECONDS: int = 10
+MAX_RETRIES: int = 3
+RETRY_BACKOFF_FACTOR: float = 0.5
+
+# Cache Expiration Settings (in seconds)
+PRICE_CACHE_TTL: int = 60
+MARKET_CAP_CACHE_TTL: int = 300
+OHLC_CACHE_TTL: int = 900
+
+# Supported Fiat Currencies for Pairings
+SUPPORTED_FIAT_CURRENCIES: List[str] = [
+    "usd",
+    "eur",
+    "gbp",
+    "jpy",
+    "cad",
+    "aud",
 ]
 
-# Default polling interval in seconds
-DEFAULT_POLL_INTERVAL = 60
+# Supported Crypto Symbols for Default Tracking
+DEFAULT_TRACKED_SYMBOLS: List[str] = [
+    "btc",
+    "eth",
+    "sol",
+    "ada",
+    "dot",
+    "xrp",
+]
 
-# Database configuration
-DB_FILE_NAME = "crypto_tracker.db"
-DB_TIMEOUT = 30.0
-
-# HTTP request settings
-REQUEST_TIMEOUT = 10
-MAX_RETRIES = 3
-RETRY_BACKOFF_FACTOR = 1.5
+# Standard API Error Messages
+ERROR_MESSAGES: Dict[str, str] = {
+    "rate_limit": "Rate limit exceeded. Please wait before retrying.",
+    "network_error": "Failed to connect to cryptocurrency provider API.",
+    "invalid_symbol": "Provided cryptocurrency symbol is not supported.",
+    "timeout": "Request to cryptocurrency API timed out.",
+}
