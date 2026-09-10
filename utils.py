@@ -1,27 +1,22 @@
-from typing import Dict, Any, Optional
-import logging
+from typing import Dict, List, Optional, Union
+from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+def format_currency(amount: Union[float, Decimal], symbol: str = "USD") -> str:
+    """Formats a numeric amount into a localized currency string."""
+    return f"{symbol} {amount:,.2f}"
 
-def format_currency(amount: float, symbol: str = 'USD') -> str:
-    """Formats a numeric crypto value into a localized currency string."""
-    try:
-        return f"{amount:,.2f} {symbol}"
-    except ValueError as e:
-        logger.error(f"Format error: {e}")
-        return "0.00"
-
-def calculate_profit_margin(buy_price: float, current_price: float) -> float:
-    """Calculates percentage difference between purchase and current price."""
-    if buy_price <= 0:
+def calculate_percentage_change(current: float, previous: float) -> float:
+    """Calculates the percentage difference between two crypto prices."""
+    if previous == 0:
         return 0.0
-    margin = ((current_price - buy_price) / buy_price) * 100
-    return round(margin, 2)
+    return ((current - previous) / previous) * 100
 
-def sanitize_ticker(ticker: str) -> str:
-    """Normalizes crypto ticker symbols to uppercase."""
-    return str(ticker).strip().upper()
+def filter_assets_by_volume(data: List[Dict[str, Union[str, float]]], min_volume: float) -> List[Dict[str, Union[str, float]]]:
+    """Returns assets exceeding a specific trading volume threshold."""
+    return [asset for asset in data if asset.get("volume", 0) >= min_volume]
 
-def get_asset_info(data: Dict[str, Any], key: str) -> Optional[Any]:
-    """Safe lookup for nested crypto data objects."""
-    return data.get(key) if isinstance(data, dict) else None
+def parse_api_response(response: Optional[Dict]) -> Dict:
+    """Extracts price data from standard exchange API responses."""
+    if not response or "data" not in response:
+        return {}
+    return response["data"]
