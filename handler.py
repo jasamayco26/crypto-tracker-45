@@ -1,36 +1,55 @@
-import math
-from typing import Dict, Optional, Union
+import json
+import logging
+from typing import Any, Dict, Optional
 
-class CryptoHandler:
-    """Helper class for handling cryptocurrency price calculations and formatting."""
+logger = logging.getLogger(__name__)
 
-    def __init__(self, default_fiat: str = "USD"):
-        self.default_fiat = default_fiat.upper()
 
-    def calculate_percentage_change(self, old_price: float, new_price: float) -> float:
-        """Calculate the percentage change between two price points."""
-        if old_price <= 0:
-            raise ValueError("Initial price must be greater than zero.")
-        change = ((new_price - old_price) / old_price) * 100
-        return round(change, 2)
+class CryptoAPIError(Exception):
+    """Custom exception raised for unrecoverable API payload errors."""
+    pass
 
-    def convert_fiat_to_crypto(self, fiat_amount: float, crypto_price: float) -> float:
-        """Determine how much cryptocurrency can be purchased with a given fiat amount."""
-        if crypto_price <= 0:
-            raise ValueError("Cryptocurrency price must be greater than zero.")
-        if fiat_amount < 0:
-            raise ValueError("Fiat amount cannot be negative.")
-        return round(fiat_amount / crypto_price, 8)
 
-    def format_price(self, price: float, currency_symbol: str = "$") -> str:
-        """Format a price value nicely, handling micro-cents for cheap assets."""
-        if price < 0:
-            raise ValueError("Price cannot be negative.")
-        
-        if price >= 1.0:
-            return f"{currency_symbol}{price:,.2f}"
-        elif price > 0:
-            # For cheap assets, dynamically adjust decimal precision
-            decimals = max(2, min(8, int(-math.log10(price)) + 2))
-            return f"{currency_symbol}{price:,.{decimals}f}"
-        return f"{currency_symbol}0.00"
+def parse_ticker_payload(raw_payload: str) -> Dict[str, float]:
+    """Parse raw API ticker JSON and extract valid asset prices safely.
+
+    Handles edge cases such as malformed JSON, missing data fields,
+    negative values, and non-numeric price data.
+    """
+    if not raw_payload or not isinstance(raw_payload, str):
+        logger.warning("Received invalid or empty raw payload string")
+        return {}
+
+    try:
+        payload_data = json.loads(raw_payload)
+    except json.JSONDecodeError as err:
+        logger.error(f"Failed to decode payload JSON: {err}")
+        return {}
+
+    if not isinstance(payload_data, dict):
+        logger.error(f"Expected dict payload, got {type(payload_data).__name__}")
+        return {}
+
+    data_section = payload_data.get("data", payload_data)
+    if not isinstance(data_section, dict):
+        logger.error("Nested data section is not a dictionary")
+        return {}
+
+    clean_prices: Dict[str, float] = {}
+
+    for ticker, val in data_section.items():
+        if not isinstance(ticker, str) or not ticker.strip():
+            continue
+
+        symbol = ticker.strip().upper()
+        try:
+            price = float(val)
+            if price < 0:
+                logger.warning(f"Discarding negative price for asset {symbol}: {price}")
+                continue
+            clean_prices[symbol] = price
+        except (ValueError, TypeError):
+            logger.warning(f"Cannot convert price value '{val}' to float for {symbol}")
+            continue
+
+    return clean_prices
