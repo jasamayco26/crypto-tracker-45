@@ -1,22 +1,36 @@
-from typing import Dict, List, Optional, Union
-from decimal import Decimal
+import logging
+from typing import Dict, Any, Optional
 
-def format_currency(amount: Union[float, Decimal], symbol: str = "USD") -> str:
-    """Formats a numeric amount into a localized currency string."""
-    return f"{symbol} {amount:,.2f}"
+# Configure logging for crypto-tracker-45
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+def format_crypto_data(data: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    """
+    Sanitizes and normalizes crypto price data from external APIs.
+    Expects dict containing 'symbol' and 'price_usd'.
+    """
+    try:
+        symbol = data.get('symbol', 'UNKNOWN').upper()
+        price = float(data.get('price_usd', 0.0))
+        
+        if price < 0:
+            logger.warning(f"Negative price detected for {symbol}: {price}")
+            return None
+            
+        return {
+            "symbol": symbol,
+            "price": round(price, 8),
+            "source": "api-v1"
+        }
+    except (ValueError, TypeError) as e:
+        logger.error(f"Data normalization failure: {e}")
+        return None
 
 def calculate_percentage_change(current: float, previous: float) -> float:
-    """Calculates the percentage difference between two crypto prices."""
+    """
+    Computes simple percentage change between two price points.
+    """
     if previous == 0:
         return 0.0
     return ((current - previous) / previous) * 100
-
-def filter_assets_by_volume(data: List[Dict[str, Union[str, float]]], min_volume: float) -> List[Dict[str, Union[str, float]]]:
-    """Returns assets exceeding a specific trading volume threshold."""
-    return [asset for asset in data if asset.get("volume", 0) >= min_volume]
-
-def parse_api_response(response: Optional[Dict]) -> Dict:
-    """Extracts price data from standard exchange API responses."""
-    if not response or "data" not in response:
-        return {}
-    return response["data"]
