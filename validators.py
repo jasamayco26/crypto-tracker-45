@@ -1,43 +1,36 @@
-from typing import Union, Optional
+import re
+from typing import Dict, Any, Union
 
-def validate_ticker(ticker: str) -> bool:
-    """
-    Check if the provided ticker symbol follows crypto market standards.
+class ValidationError(Exception):
+    """Custom exception raised when validation fails."""
+    pass
 
-    Args:
-        ticker: The asset symbol (e.g., 'BTC', 'ETH').
+def validate_ticker(ticker: str) -> str:
+    """Validate and normalize a cryptocurrency ticker symbol."""
+    if not isinstance(ticker, str):
+        raise ValidationError("Ticker must be a string")
+    cleaned = ticker.strip().upper()
+    if not re.match(r"^[A-Z0-9]{2,10}$", cleaned):
+        raise ValidationError(f"Invalid ticker format: {ticker}")
+    return cleaned
 
-    Returns:
-        bool: True if valid, False otherwise.
-    """
-    if not isinstance(ticker, str) or not (2 <= len(ticker) <= 10):
-        return False
-    return ticker.isalnum()
+def validate_price(price: Union[int, float, str]) -> float:
+    """Validate and convert price to a positive float."""
+    try:
+        val = float(price)
+    except (ValueError, TypeError):
+        raise ValidationError(f"Invalid price value: {price}")
+    if val <= 0:
+        raise ValidationError("Price must be greater than zero")
+    return val
 
-def validate_price(price: Union[int, float]) -> bool:
-    """
-    Ensure the price is a positive numerical value.
-
-    Args:
-        price: The numeric price of the asset.
-
-    Returns:
-        bool: True if price is positive, False otherwise.
-    """
-    if not isinstance(price, (int, float)):
-        return False
-    return price > 0
-
-def sanitize_input(value: Optional[str]) -> str:
-    """
-    Clean string input by removing whitespace and converting to uppercase.
-
-    Args:
-        value: The raw user input string.
-
-    Returns:
-        str: The sanitized ticker string.
-    """
-    if value is None:
-        return ""
-    return value.strip().upper()
+def validate_api_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate API payload structure and data integrity."""
+    if not isinstance(data, dict):
+        raise ValidationError("API response must be a dictionary")
+    if "status" in data and data["status"] == "error":
+        msg = data.get("message", "Unknown API error")
+        raise ValidationError(f"API returned error: {msg}")
+    if "data" not in data or not isinstance(data["data"], (dict, list)):
+        raise ValidationError("Missing or malformed data field in response")
+    return data
