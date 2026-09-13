@@ -1,53 +1,29 @@
-"""Utility helper functions for crypto price and market data manipulation."""
+import json
+import os
+from typing import Dict, Any
 
-from typing import Dict, Any, Union, Optional
+DEFAULT_CONFIG = {
+    "api_base_url": "https://api.coingecko.com/api/v3",
+    "request_timeout": 30,
+    "currency": "usd",
+    "update_interval": 60
+}
 
-
-def format_currency(value: Union[int, float], symbol: str = "$") -> str:
-    """Format a numeric value as a currency string with appropriate precision."""
-    if value is None:
-        return f"{symbol}0.00"
+def load_config(config_path: str = "config.json") -> Dict[str, Any]:
+    """Loads configuration from disk with fallback to defaults."""
+    config = DEFAULT_CONFIG.copy()
     
-    abs_val = abs(value)
-    if abs_val >= 1.0:
-        return f"{symbol}{value:,.2f}"
-    elif abs_val >= 0.0001:
-        return f"{symbol}{value:,.6f}"
-    else:
-        return f"{symbol}{value:,.8f}"
-
-
-def calculate_price_change(current_price: float, previous_price: float) -> Dict[str, Any]:
-    """Calculate absolute and percentage price changes between two points."""
-    if previous_price <= 0:
-        return {"change": 0.0, "percentage": 0.0, "direction": "neutral"}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r") as f:
+                user_config = json.load(f)
+                config.update(user_config)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load config file: {e}. Using defaults.")
     
-    diff = current_price - previous_price
-    pct = (diff / previous_price) * 100.0
-    
-    if diff > 0:
-        direction = "up"
-    elif diff < 0:
-        direction = "down"
-    else:
-        direction = "neutral"
-        
-    return {
-        "change": round(diff, 8),
-        "percentage": round(pct, 2),
-        "direction": direction
-    }
+    return config
 
-
-def truncate_address(address: str, prefix_len: int = 6, suffix_len: int = 4) -> str:
-    """Truncate a crypto wallet address for compact display."""
-    if not address or len(address) <= (prefix_len + suffix_len):
-        return address or ""
-    return f"{address[:prefix_len]}...{address[-suffix_len:]}"
-
-
-def normalize_ticker(symbol: str) -> str:
-    """Normalize market ticker symbol to uppercase standard format."""
-    if not symbol:
-        return ""
-    return symbol.strip().upper().replace("-", "").replace("/", "")
+def validate_config(config: Dict[str, Any]) -> bool:
+    """Ensures required configuration keys are present and valid."""
+    required_keys = ["api_base_url", "currency"]
+    return all(key in config for key in required_keys)
